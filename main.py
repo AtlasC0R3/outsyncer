@@ -87,6 +87,7 @@ if args.convert:
     else:
         print('FFmpeg not installed; to convert music files to a certain type, '
               'please install ffmpeg first.')
+        exit(1)
 
 glob_path = f"{path}**/*.*" if path.endswith('/') else f"{path}/**/*.*"  # get glob directory stuff
 

@@ -14,7 +14,7 @@ class KDEPath:
 
 # https://github.com/forabi/nautilus-kdeconnect/blob/master/kdeconnect.py
 # is a huge fucking resource here, KDE Connect has no "usable" API otherwise.
-# So we'll have to make our own, as shown there.
+# So we'll have to make our own, as shown there and here.
 
 
 def get_devices():

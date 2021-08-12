@@ -1,12 +1,12 @@
 import glob
 import music_tag
-from classes import Track
+from utils.classes import Track
 import shutil
 import os
 from datetime import datetime as d
 import re
 import filecmp
-from kdeconnect import get_kdeconnect_device
+from utils.kdeconnect import get_kdeconnect_device
 import logging
 import argparse
 from subprocess import run

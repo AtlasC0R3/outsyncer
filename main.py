@@ -127,8 +127,8 @@ for file in thing:
             exclude = False
             for artist in excluded_artists:
                 if pattern.sub('', artist) == pattern.sub('', track.artist.lower()
-                        .replace('ç', '').replace('é', '')
-                        .replace('à', '')):  # stupid.
+                                                          .replace('ç', '').replace('é', '')
+                                                          .replace('à', '')):  # stupid.
                     exclude = True
             for album in excluded_albums:
                 if pattern.sub('', album) == pattern.sub('', track.album.lower()):
@@ -160,18 +160,22 @@ if os.name == 'posix' and args.kconnect:  # KDE Connect integration only works o
 # Regular path copying
 if not remote_path:
     while not remote_path:
+        maybe_path = None
         try:
             maybe_path = input("Which path should I use for copying? ")
         except KeyboardInterrupt:
             print("Alright, alright, jeez.")
             exit(1)
-        if os.path.isdir:
-            logging.info("Valid path, sir!")
-            remote_path = maybe_path
-        elif os.path.isfile(maybe_path):
-            print("That is a file, not a directory.")
+        if not maybe_path:
+            print("That's nothing.")
         else:
-            print("That directory does not exist.")
+            if os.path.isdir(maybe_path):
+                logging.info("Valid path, sir!")
+                remote_path = maybe_path
+            elif os.path.isfile(maybe_path):
+                print("That is a file, not a directory.")
+            else:
+                print("That directory does not exist.")
 
 # Finalize remote_path string
 if os.name == 'nt':  # de-windows-ify the path
@@ -196,6 +200,7 @@ else:
 
 overall_time = d.timestamp(d.now())  # Start the timer, I guess.
 for index, track in enumerate(tracks):
+    old_dist_path = None  # OH MY FUCKING GOD PYCHARM SHUT THE FUCK UP THIS WON'T BE UNDEFINED FUCK
     if raw_format_string:
         format_string = raw_format_string.format(t=track).replace('/', '')
         path_strings = format_string.split('||')
@@ -277,9 +282,9 @@ for index, track in enumerate(tracks):
             if convert_to:
                 # convert
                 run_results = run(['ffmpeg', '-i', track.filename,  # hey FFmpeg, convert this
-                                   '-map_metadata', '0',            # and keep its metadata
-                                   converted_filename],             # and save it to output.mp3
-                                  capture_output=True)              # capture output
+                                   '-map_metadata', '0',  # and keep its metadata
+                                   converted_filename],  # and save it to output.mp3
+                                  capture_output=True)  # capture output
                 if run_results.returncode != 0:
                     if f"Unable to find a suitable output format for '{converted_filename}'" \
                             in run_results.stderr.decode('utf-8'):
@@ -293,7 +298,7 @@ for index, track in enumerate(tracks):
                               f"Here are a few last lines from the ffmpeg output:\n")
                         print('\n'.join(run_results.stderr.decode('utf-8').split('\n')[-6:-1]))
                     exit(run_results.returncode)
-                shutil.move(converted_filename, dist_path)           # then transfer it to device
+                shutil.move(converted_filename, dist_path)  # then transfer it to device
             else:
                 # copy
                 shutil.copy(track.filename, dist_path)

@@ -47,7 +47,7 @@ parser.add_argument("--kconnect", type=str2bool, nargs='?',
                     const=True, default=True,
                     help="Enables or disables KDE Connect features. On by default. To disable, "
                          "use --kconnect false")
-parser.add_argument("--kconnectdir", default="MusicTestingDir",
+parser.add_argument("--kconnectdir", default="MusicTestingDir",  # TODO: make this Music for release
                     help="If the program will pass through KDE Connect to transfer directly to "
                          "the user's phone, this will specify in which directory it will transfer "
                          "all of the files to.")

@@ -207,7 +207,7 @@ for index, track in enumerate(tracks):
                 os.remove(dist_path)
         else:
             do_copy = False
-    if do_copy and convert_to:
+    if do_copy or (convert_to and do_copy):
         logging.debug(f"copy {track.filename} ({track.title} by {track.artist}) to "
                       f"{remote_path}{song_path}")
         start = d.timestamp(d.now())

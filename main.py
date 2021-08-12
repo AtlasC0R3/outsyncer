@@ -41,6 +41,15 @@ parser.add_argument("--convert", help="If specified, converts music files to "
 parser.add_argument("--force-ffmpeg", help="This, combined with --convert, will bypass any "
                                            "checks verifying whether FFmpeg is installed or not.",
                     action=argparse.BooleanOptionalAction)
+parser.add_argument("--custom-format", help="If specified, will be used to customize how songs "
+                                            "are placed/sorted. Example: "
+                                            "--custom-format "
+                                            "\"{t.artist}||({t.year}) {t.album}||"
+                                            "{t.tracknumber} {t.title}\" will sort songs like "
+                                            "Artist Name/(2021) Album Name/1 Title.mp3.\nNOTE: "
+                                            "This is experimental, things may break, your cat "
+                                            "might bark and sit on the ceiling and your "
+                                            "dishwasher might be your new oven.")
 
 # define KDE Connect arguments
 parser.add_argument("--kconnect", type=str2bool, nargs='?',
@@ -89,11 +98,6 @@ logging.debug(f"{len(thing)} files found.")
 
 tracks = []
 
-# excluded_artists = ['aperture science psychoacoustics laboratory',
-#                     'mick gordon',
-#                     'valve',
-#                     'kelly bailey',
-#                     'françois pérusse']  # ideally should all be in lowercase
 excluded_artists = [item.lower() for item in (args.excludedartists.split(',')
                                               if args.excludedartists else [])]
 excluded_albums = [item.lower() for item in (args.excludedalbums.split(',')
@@ -101,7 +105,7 @@ excluded_albums = [item.lower() for item in (args.excludedalbums.split(',')
 excluded_tracks = [item.lower() for item in (args.excludedtracks.split(',')
                                              if args.excludedtracks else [])]
 
-pattern = re.compile(r'[\W_]+')
+pattern = re.compile(r"[\0<>:\"/\\|?*]")  # IT JUST WORKS.
 
 logging.info("Looking for tracks in files found...")
 scan_time = d.timestamp(d.now())
@@ -116,7 +120,7 @@ for file in thing:
             tags = None
     if tags:
         try:
-            track = Track(tags, file.split('/')[-1])
+            track = Track(tags, file)
         except KeyError:
             logging.debug(f"{file} isn't an actual music file. whoops.")
         else:
@@ -139,9 +143,7 @@ for file in thing:
     else:
         logging.debug(f"{file} is not an audio file.")
 print(f"{len(tracks)} tracks found.")
-logging.info(f"It also took me {(d.timestamp(d.now()) - scan_time) * 1000}ms to scan all that.")
-
-overall_time = d.timestamp(d.now())
+logging.info(f"It also took me {d.timestamp(d.now()) - scan_time} seconds to scan all that.")
 
 # get output directory
 remote_path = ""  # copy music over there
@@ -173,13 +175,39 @@ if os.name == 'nt':  # de-windows-ify the path
 if not remote_path.endswith('/'):
     remote_path += '/'
 
+if args.custom_format:
+    raw_format_string = args.custom_format
+elif os.path.exists(f'{remote_path}.outsyncer_format'):
+    raw_format_string = open(f'{remote_path}.outsyncer_format', 'r').read().replace('\n', '')
+else:
+    raw_format_string = None
+
+overall_time = d.timestamp(d.now())  # Start the timer, I guess.
 for index, track in enumerate(tracks):
-    artist_dir = f"{pattern.sub('', track.artist.lower())}/"
-    album_dir = f"{pattern.sub('', track.album.lower())}/"
-    song_directories = f"{artist_dir}{album_dir}"
-    song_path = f"{song_directories}" \
-                f"{pattern.sub('', track.title.lower())}.{track.file_ext}"
-    dist_path = f"{remote_path}{song_path}"
+    if raw_format_string:
+        format_string = raw_format_string.format(t=track).replace('/', '')
+        path_strings = format_string.split('||')
+        path_strings = [pattern.sub('', x) for x in path_strings]
+        if len(path_strings) != 3:
+            print("The custom directory format is invalid. There must be exactly three "
+                  "directories (separated by ||), the first one for the artist, the second one "
+                  "for the album and the third one for the song's name. Use --help for more info.")
+            exit(1)
+        artist_dir = path_strings[0] + "/"
+        album_dir = path_strings[1] + "/"
+        song_directories = f"{artist_dir}{album_dir}"
+        song_file = f"{song_directories}" \
+                    f"{path_strings[2]}"
+        song_path = song_file + f".{track.file_ext}"
+        dist_path = f"{remote_path}{song_path}"
+    else:
+        artist_dir = f"{pattern.sub('', track.artist.lower())}/".replace(' ', '')
+        album_dir = f"{pattern.sub('', track.album.lower())}/".replace(' ', '')
+        song_directories = f"{artist_dir}{album_dir}".replace(' ', '')
+        song_file = f"{song_directories}" \
+                    f"{pattern.sub('', track.title.lower())}".replace(' ', '')
+        song_path = song_file + f".{track.file_ext}"
+        dist_path = f"{remote_path}{song_path}"
 
     if not os.path.exists(remote_path):
         os.mkdir(remote_path)
@@ -194,8 +222,7 @@ for index, track in enumerate(tracks):
             print(f"{dist_path} has been found; deleting in favor of the converted file...")
             # warn the user
             os.remove(dist_path)  # remove unconverted file
-        song_path = f"{song_directories}" \
-                    f"{pattern.sub('', track.title.lower())}.{convert_to}"
+        song_path = song_file + f".{convert_to}"
         dist_path = f"{remote_path}{song_path}"
         # too lazy to explain
     if os.path.exists(dist_path):
@@ -211,6 +238,7 @@ for index, track in enumerate(tracks):
         else:
             do_copy = False
     if do_copy or (convert_to and do_copy):
+        song_path = song_path.replace('  ', ' ')
         logging.debug(f"copy {track.filename} ({track.title} by {track.artist}) to "
                       f"{remote_path}{song_path}")
         start = d.timestamp(d.now())
@@ -258,5 +286,6 @@ for index, track in enumerate(tracks):
             exit(1)
         milliseconds = (d.timestamp(d.now()) - start) * 1000
         logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
-print(f"\nAll done! It took me {(d.timestamp(d.now()) - overall_time) * 1000}ms "
+print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
       f"to transfer {len(tracks)} songs.")
+open(f'{remote_path}.outsyncer_format', 'w+').write(raw_format_string)

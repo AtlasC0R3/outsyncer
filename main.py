@@ -127,8 +127,8 @@ for file in thing:
             exclude = False
             for artist in excluded_artists:
                 if pattern.sub('', artist) == pattern.sub('', track.artist.lower()
-                                                          .replace('ç', '').replace('é', '')
-                                                          .replace('à', '')):  # stupid.
+                        .replace('ç', '').replace('é', '')
+                        .replace('à', '')):  # stupid.
                     exclude = True
             for album in excluded_albums:
                 if pattern.sub('', album) == pattern.sub('', track.album.lower()):
@@ -160,7 +160,11 @@ if os.name == 'posix' and args.kconnect:  # KDE Connect integration only works o
 # Regular path copying
 if not remote_path:
     while not remote_path:
-        maybe_path = input("Which path should I use for copying? ")
+        try:
+            maybe_path = input("Which path should I use for copying? ")
+        except KeyboardInterrupt:
+            print("Alright, alright, jeez.")
+            exit(1)
         if os.path.isdir:
             logging.info("Valid path, sir!")
             remote_path = maybe_path
@@ -175,10 +179,18 @@ if os.name == 'nt':  # de-windows-ify the path
 if not remote_path.endswith('/'):
     remote_path += '/'
 
+new_format_string = False
+raw_format_string = None
+old_format = None
 if args.custom_format:
     raw_format_string = args.custom_format
-elif os.path.exists(f'{remote_path}.outsyncer_format'):
-    raw_format_string = open(f'{remote_path}.outsyncer_format', 'r').read().replace('\n', '')
+if os.path.exists(f'{remote_path}.outsyncer_format'):
+    file_content = open(f'{remote_path}.outsyncer_format', 'r').read().replace('\n', '')
+    if raw_format_string != file_content:
+        new_format_string = True
+        old_format = file_content
+    else:
+        raw_format_string = file_content
 else:
     raw_format_string = None
 
@@ -200,6 +212,17 @@ for index, track in enumerate(tracks):
                     f"{path_strings[2]}"
         song_path = song_file + f".{track.file_ext}"
         dist_path = f"{remote_path}{song_path}"
+        if new_format_string:
+            path_strings = old_format.format(t=track).replace('/', '').split('||')
+            path_strings = [pattern.sub('', x) for x in path_strings]
+
+            old_artist_dir = path_strings[0] + "/"
+            old_album_dir = path_strings[1] + "/"
+            old_song_directories = f"{old_artist_dir}{old_album_dir}"
+            old_song_file = f"{old_song_directories}" \
+                            f"{path_strings[2]}"
+            old_song_path = old_song_file + f".{track.file_ext}"
+            old_dist_path = f"{remote_path}{old_song_path}"
     else:
         artist_dir = f"{pattern.sub('', track.artist.lower())}/".replace(' ', '')
         album_dir = f"{pattern.sub('', track.album.lower())}/".replace(' ', '')
@@ -237,6 +260,10 @@ for index, track in enumerate(tracks):
                 os.remove(dist_path)
         else:
             do_copy = False
+    if new_format_string:
+        if os.path.exists(old_dist_path):
+            print(f"{old_dist_path} has been found; deleting in favor of the new path format...")
+            os.remove(old_dist_path)
     if do_copy or (convert_to and do_copy):
         song_path = song_path.replace('  ', ' ')
         logging.debug(f"copy {track.filename} ({track.title} by {track.artist}) to "
@@ -286,6 +313,21 @@ for index, track in enumerate(tracks):
             exit(1)
         milliseconds = (d.timestamp(d.now()) - start) * 1000
         logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
+
+print("Cleaning empty directories...")
+for folder in [x for x in os.listdir(remote_path) if os.path.isdir(f"{remote_path}{x}")]:
+    logging.debug(folder)
+    logging.debug(f"{remote_path}{folder}")
+    folder_path = f"{remote_path}{folder}"
+    for subfolder in [x for x in os.listdir(folder_path) if
+                      os.path.isdir(f"{folder_path}/{x}")]:
+        subfolder_path = f"{folder_path}/{subfolder}"
+        files = glob.glob(f"{subfolder_path}/*", recursive=True)
+        if not files:
+            logging.info(f"{subfolder_path} is empty!")
+            shutil.rmtree(subfolder_path)
+
 print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
       f"to transfer {len(tracks)} songs.")
-open(f'{remote_path}.outsyncer_format', 'w+').write(raw_format_string)
+if raw_format_string:
+    open(f'{remote_path}.outsyncer_format', 'w+').write(raw_format_string)

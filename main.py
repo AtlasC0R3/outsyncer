@@ -1,5 +1,5 @@
 import glob
-import mutagen
+import music_tag
 from classes import Track
 import shutil
 import os
@@ -108,12 +108,15 @@ scan_time = d.timestamp(d.now())
 for file in thing:
     logging.debug(f"scanning {file}")
     if file.lower().endswith('.zip'):
-        mutahar = None
+        tags = None
     else:
-        mutahar = mutagen.File(file)
-    if mutahar:
         try:
-            track = Track(mutahar)
+            tags = music_tag.load_file(file)
+        except NotImplementedError:
+            tags = None
+    if tags:
+        try:
+            track = Track(tags, file.split('/')[-1])
         except KeyError:
             logging.debug(f"{file} isn't an actual music file. whoops.")
         else:

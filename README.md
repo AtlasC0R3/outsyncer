@@ -1,6 +1,9 @@
 # Outsyncer
 A CLI-based app meant to synchronize songs from one device to another, *but can also be used to sort song files elegantly*
 
+**THIS PROJECT IS NOT FINISHED YET!** If you use it *now*, be ready to figure out how this thing works by yourself.
+Please look at the [GitHub Projects](https://github.com/users/AtlasC0R3/projects/2) page for this project.
+
 spoiler alert: if you don't like swear words, don't go through the code.
 <!-- fucking told you. -->
 

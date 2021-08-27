@@ -10,3 +10,6 @@ spoiler alert: if you don't like swear words, don't go through the code.
 - customize how files are organized *(custom formats, not quite "reliable")*
 - **reorganize music files and directories** to a specific directory using custom formats
 - exclude specific tracks, albums or artists from being sorted/synchronized
+
+
+*Copyright (C) 2021 atlas_core*

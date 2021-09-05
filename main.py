@@ -275,10 +275,18 @@ for index, track in enumerate(tracks):
         start = d.timestamp(d.now())
         print(f"Copying {track.title} by {track.artist}...")
         converted_filename = None
+        do_convert = False
         if convert_to:
-            converted_filename = f"output.{convert_to}"
+            if dist_path.endswith(convert_to):
+                logging.info(f'whoops, {song_path} is already in {convert_to}, we won\'t convert')
+                # no need to convert
+                do_convert = False
+            else:
+                # file type is different, we should convert.
+                converted_filename = f"output.{convert_to}"
+                do_convert = True
         try:
-            if convert_to:
+            if do_convert:
                 # convert
                 run_results = run(['ffmpeg', '-i', track.filename,  # hey FFmpeg, convert this
                                    '-map_metadata', '0',  # and keep its metadata

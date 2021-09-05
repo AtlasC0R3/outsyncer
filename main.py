@@ -196,8 +196,6 @@ if os.path.exists(f'{remote_path}.outsyncer_format'):
         old_format = file_content
     else:
         raw_format_string = file_content
-else:
-    raw_format_string = None
 
 overall_time = d.timestamp(d.now())  # Start the timer, I guess.
 for index, track in enumerate(tracks):

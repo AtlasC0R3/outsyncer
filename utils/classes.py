@@ -6,6 +6,7 @@ class Track:
         self.title = tags['tracktitle'].first
         self.artist = tags['albumartist'].first
         self.album = tags['album'].first
+        self.artwork = tags['artwork'].first
         self.comment = tags['comment'].first
         self.discnumber = tags['discnumber'].first
         self.genre = tags['genre'].first

@@ -1,8 +1,6 @@
 import glob
 import music_tag
-from utils.classes import Track
 import shutil
-import os
 from datetime import datetime as d
 import re
 import filecmp
@@ -10,6 +8,8 @@ from utils.kdeconnect import get_kdeconnect_device
 import logging
 import argparse
 from subprocess import run
+
+from utils.folderformat import *
 
 
 def str2bool(v):
@@ -38,6 +38,10 @@ parser.add_argument('--excludedtracks', help='List of excluded tracks. Example: 
                                              '1x1,Ouch"', type=str)
 parser.add_argument("--convert", help="If specified, converts music files to "
                                       "specified file extension. Example --convert mp3")
+parser.add_argument("--folderformat", help="If specified, this will format the folder using "
+                                           "desktop.ini or .desktop to (hopefully) set the "
+                                           "folder's icon to the album artwork.",
+                    action=argparse.BooleanOptionalAction)
 parser.add_argument("--force-ffmpeg", help="This, combined with --convert, will bypass any "
                                            "checks verifying whether FFmpeg is installed or not.",
                     action=argparse.BooleanOptionalAction)
@@ -62,6 +66,10 @@ parser.add_argument("--kconnectdir", default="MusicTestingDir",  # TODO: make th
                          "all of the files to.")
 
 args = parser.parse_args()
+
+if args.folderformat:
+    from PIL import Image
+    import io
 
 log_level = args.log
 if log_level:
@@ -197,6 +205,12 @@ if os.path.exists(f'{remote_path}.outsyncer_format'):
     else:
         raw_format_string = file_content
 
+
+try:
+    directory_file_name = directory_file_names[os.name]
+except KeyError:
+    directory_file_name = None
+
 overall_time = d.timestamp(d.now())  # Start the timer, I guess.
 for index, track in enumerate(tracks):
     old_dist_path = None  # OH MY FUCKING GOD PYCHARM SHUT THE FUCK UP THIS WON'T BE UNDEFINED FUCK
@@ -325,6 +339,18 @@ for index, track in enumerate(tracks):
             exit(1)
         milliseconds = (d.timestamp(d.now()) - start) * 1000
         logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
+    if not os.path.exists(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}"):
+        # generate favicon.ico file
+        # open(f'{remote_path}{artist_dir}{album_dir}favicon.png', 'wb').write(track.artwork.data)
+        artwork = Image.open(io.BytesIO(track.artwork.data))
+        artwork.save(f'{remote_path}{artist_dir}{album_dir}favicon.ico')
+        # generate desktop.ini/.directory file
+        open(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}", 'wt'). \
+            write(format_directory_file(track).replace('\n', '\r\n'))
+        if os.name == 'nt':
+            os.system(f'attrib +S +H "{remote_path}{artist_dir}{album_dir}{directory_file_name}"')
+            os.system(f'attrib +R "{remote_path}{artist_dir}{album_dir.removesuffix("/")}"')
+
 
 print("Cleaning empty directories...")
 for folder in [x for x in os.listdir(remote_path) if os.path.isdir(f"{remote_path}{x}")]:

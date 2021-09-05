@@ -11,6 +11,7 @@ class Device:
 class KDEPath:
     name = ""
     path = ""
+    id = ""
 
 # https://github.com/forabi/nautilus-kdeconnect/blob/master/kdeconnect.py
 # is a huge fucking resource here, KDE Connect has no "usable" API otherwise.
@@ -85,10 +86,12 @@ def get_kdeconnect_device_path(device_id: str, attempt_to_guess=True):
                     thingy = KDEPath()
                     thingy.path = uhh_fuck_how_do_I_name_this.path
                     thingy.name = uhh_fuck_how_do_I_name_this.name
+                    thingy.id = device_id
                     return thingy
             subdirectory = KDEPath()
             subdirectory.name = uhh_fuck_how_do_I_name_this.name
             subdirectory.path = uhh_fuck_how_do_I_name_this.path
+            subdirectory.id = device_id
             to_return.append(subdirectory)
         return to_return
 

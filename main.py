@@ -367,5 +367,10 @@ for folder in [x for x in os.listdir(remote_path) if os.path.isdir(f"{remote_pat
 
 print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
       f"to transfer {len(tracks)} songs.")
+
+if thing:
+    os.system(f'kdeconnect-cli -d "{thing.id}" --ping-msg "{len(tracks)} songs have been '
+              f'transferred to this device; check them out."')
+
 if raw_format_string:
     open(f'{remote_path}.outsyncer_format', 'w+').write(raw_format_string)

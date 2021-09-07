@@ -16,10 +16,10 @@ InfoTip={t.album} by {t.artist}, released in {t.year}
 FolderType=Music
 Mode=
 Vid="""
-    elif os.name == 'posix':  # TODO: fuck around more with .directory files
+    elif os.name == 'posix':
         return f"""
 [Desktop Entry]
-Icon=favicon.ico
+Icon=./favicon.ico
 """
 
 

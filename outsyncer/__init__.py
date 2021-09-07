@@ -14,6 +14,10 @@ __version__ = '1.0.0'
 
 
 def main():
+    """
+    The main program. Do I need to explain what the program does?
+    :return: nothing. it's a program.
+    """
     def str2bool(v):
         if isinstance(v, bool):
             return v

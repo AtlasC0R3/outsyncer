@@ -177,4 +177,4 @@ def get_kdeconnect_device():
                     print("That is not in the list.")
     else:
         to_use = paths
-    return to_use
+    return [to_use, device_to_use.id]

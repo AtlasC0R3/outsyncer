@@ -61,7 +61,7 @@ def main():
                         const=True, default=True,
                         help="Enables or disables KDE Connect features. On by default. To disable, "
                              "use --kconnect false")
-    parser.add_argument("--kconnectdir", default="MusicTestingDir",  # TODO: make this Music for release
+    parser.add_argument("--kconnectdir", default="Music",
                         help="If the program will pass through KDE Connect to transfer directly to "
                              "the user's phone, this will specify in which directory it will transfer "
                              "all of the files to.")
@@ -159,9 +159,12 @@ def main():
     remote_path = ""  # copy music over there
 
     # KDE Connect
+    kconnect_device_id = None
     if os.name == 'posix' and args.kconnect:  # KDE Connect integration only works on Linux.
         thing = get_kdeconnect_device()
         if thing:
+            kconnect_device_id = thing[1]
+            thing = thing[0]
             print(f"Using {thing.name} ({thing.path}) through KDE Connect.")
             dir_to_copy = args.kconnectdir.replace('/', '').replace('\\', '')
             remote_path = thing.path + f"/{dir_to_copy}/"
@@ -367,9 +370,9 @@ def main():
     print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
           f"to transfer {len(tracks)} songs.")
 
-    # if thing:
-    #     os.system(f'kdeconnect-cli -d "{thing.id}" --ping-msg "{len(tracks)} songs have been '
-    #               f'transferred to this device; check them out."')
+    if kconnect_device_id:
+        os.system(f'kdeconnect-cli -d "{kconnect_device_id}" --ping-msg "Outsyncer: '
+                  f'{len(tracks)} songs have been transferred to this device; check them out."')
 
     if raw_format_string:
         open(f'{remote_path}.outsyncer_format', 'w+').write(raw_format_string)

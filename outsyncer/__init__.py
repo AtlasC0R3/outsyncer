@@ -342,11 +342,12 @@ def main():
                 exit(1)
             milliseconds = (d.timestamp(d.now()) - start) * 1000
             logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
-        if not os.path.exists(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}"):
+        if (not os.path.exists(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}")) and \
+                args.folderformat:
             # generate favicon.ico file
-            # open(f'{remote_path}{artist_dir}{album_dir}favicon.png', 'wb').write(track.artwork.data)
             artwork = Image.open(io.BytesIO(track.artwork.data))
             artwork.save(f'{remote_path}{artist_dir}{album_dir}favicon.ico')
+
             # generate desktop.ini/.directory file
             open(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}", 'wt'). \
                 write(format_directory_file(track).replace('\n', '\r\n'))

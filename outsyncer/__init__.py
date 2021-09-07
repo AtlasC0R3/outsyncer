@@ -356,13 +356,13 @@ def main():
         logging.debug(folder)
         logging.debug(f"{remote_path}{folder}")
         folder_path = f"{remote_path}{folder}"
-        for subfolder in [x for x in os.listdir(folder_path) if
-                          os.path.isdir(f"{folder_path}/{x}")]:
-            subfolder_path = f"{folder_path}/{subfolder}"
-            files = glob.glob(f"{subfolder_path}/*", recursive=True)
+        for subdirectory in [x for x in os.listdir(folder_path) if
+                             os.path.isdir(f"{folder_path}/{x}")]:
+            subdirectory_path = f"{folder_path}/{subdirectory}"
+            files = glob.glob(f"{subdirectory_path}/*", recursive=True)
             if not files:
-                logging.info(f"{subfolder_path} is empty!")
-                shutil.rmtree(subfolder_path)
+                logging.info(f"{subdirectory_path} is empty!")
+                shutil.rmtree(subdirectory_path)
 
     print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
           f"to transfer {len(tracks)} songs.")

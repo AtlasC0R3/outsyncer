@@ -9,6 +9,7 @@ import logging
 import argparse
 from subprocess import run
 from .utils.folderformat import *
+from .utils.misc import clean_folders
 
 __version__ = '1.0.0'
 
@@ -403,23 +404,8 @@ def main():
                 # I don't know what these commands do.
 
     print("Cleaning empty directories...")
-    for folder in [x for x in os.listdir(remote_path) if os.path.isdir(f"{remote_path}{x}")]:
-        # iterate through every subdirectory in directory
-        logging.debug(folder)
-        logging.debug(f"{remote_path}{folder}")
-        folder_path = f"{remote_path}{folder}"  # get the full path of the directory
-        for subdirectory in [x for x in os.listdir(folder_path) if
-                             os.path.isdir(f"{folder_path}/{x}")]:
-            # for subdirectory in directory we just found
-            subdirectory_path = f"{folder_path}/{subdirectory}"  # get full path of subdirectory
-            files = glob.glob(f"{subdirectory_path}/*", recursive=True)  # get list of files
-            for dir_file_name in directory_file_names:
-                files = [x for x in files if x != dir_file_name]
-                # exclude directory files like .directory or desktop.ini, they aren't actual files.
-            if not files:  # if there are no files
-                # folder is empty, we will remove it.
-                logging.info(f"{subdirectory_path} is empty!")
-                shutil.rmtree(subdirectory_path)
+    clean_folders(remote_path)
+    clean_folders(path)
 
     print(f"\nAll done! It took me {d.timestamp(d.now()) - overall_time} seconds "
           f"to transfer {len(tracks)} songs.")

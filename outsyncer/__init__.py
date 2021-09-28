@@ -55,6 +55,12 @@ def main():
                                                     "there are any file differences, if the file "
                                                     "already exists.",
                         action=argparse.BooleanOptionalAction)
+    parser.add_argument("--automatic-delete", help="This option will make the program delete the "
+                                                   "old file after it is done transferring/sorting"
+                                                   " said file. Useful for sorting, but can also "
+                                                   "be very dangerous if used incorrectly. "
+                                                   "Please know what you're doing.",
+                        action=argparse.BooleanOptionalAction)
     parser.add_argument("--custom-format", help="If specified, will be used to customize how songs "
                                                 "are placed/sorted. Example: "
                                                 "--custom-format "
@@ -111,6 +117,7 @@ def main():
     glob_path = f"{path}**/*.*" if path.endswith('/') else f"{path}/**/*.*"  # get glob directory stuff
 
     check_if_files_are_different = args.force_check_files
+    delete_file = args.automatic_delete
 
     print(f"Looking for files in {path}...")      # tell the user where we're looking
     thing = glob.glob(glob_path, recursive=True)  # get files
@@ -367,6 +374,9 @@ def main():
                 else:
                     # just copy the file. easy. no need to do complex funky conversion stuff.
                     shutil.copy(track.filename, dist_path)
+                if delete_file:
+                    # delete the file, as we are done sorting it.
+                    os.remove(track.filename)
             except KeyboardInterrupt:
                 # delete the file
                 print("\n\nKeyboardInterrupt received, attempting to delete file...\n"

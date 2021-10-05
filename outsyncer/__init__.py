@@ -295,6 +295,9 @@ def main():
             song_directories = f"{artist_dir}{album_dir}".replace(' ', '')  # directories for song
             song_file = f"{song_directories}" \
                         f"{exclude_regex_pattern.sub('', track.title.lower())}".replace(' ', '')
+            # also format file name around the title, so if it's "It's All Over",
+            # it should look like "itsallover"
+
             # directories for song
             song_path = song_file + f".{track.file_ext}"  # song file name and extension
             dist_path = f"{remote_path}{song_path}"       # song file path

@@ -84,9 +84,17 @@ def main():
     args = parser.parse_args()  # get and parse arguments passed by user
 
     if args.folderformat:      # if we should inject desktop.ini and .directory files
-        # import necessary dependencies for that to happen
-        from PIL import Image
-        import io
+        if os.name not in ["nt", "posix"]:
+            print("Cannot complete folder formatting because Atlas is an idiot")
+            logging.error("warned user that directory files is impossible due to macOS "
+                          "and the fact that I don't have any Apple products at home "
+                          "so I can't even implement this feature for macOS devices.")
+            args.folderformat = False
+            # I don't have a macOS system and I really don't wanna mess with KVM for now.
+        else:
+            # import necessary dependencies for that to happen
+            from PIL import Image
+            import io
 
     log_level = args.log  # get log level argument
     if log_level:

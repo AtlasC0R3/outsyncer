@@ -1,5 +1,10 @@
 import glob
-import music_tag
+try:
+    import music_tag
+except ModuleNotFoundError:
+    print("Tried installing the pip requirements for this program? "
+          "I can't work if you don't install the requirements!")
+    exit(1)
 import shutil
 from datetime import datetime as d
 import re

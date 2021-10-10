@@ -1,1 +1,3 @@
 .idea/
+outsyncer/__pycache__
+outsyncer/utils/__pycache__

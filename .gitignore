@@ -1,3 +1,6 @@
 .idea/
 outsyncer/__pycache__
 outsyncer/utils/__pycache__
+build/
+dist/
+outsyncer.egg-info/

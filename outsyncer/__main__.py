@@ -1,4 +1,4 @@
-from outsyncer import main
+from . import main
 
 main()
 # what were you expectin'?

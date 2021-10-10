@@ -1,5 +1,5 @@
 import os
-from outsyncer.utils.classes import Track
+from .classes import Track
 
 
 def format_directory_file(t: Track, use_icon=True):

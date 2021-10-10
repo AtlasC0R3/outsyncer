@@ -1,0 +1,25 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x12\x00O\x00u\x00t\x00s\x00y\x00n\x00c\x00e\x00r)
+
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=scriptAppLauncher
+Name=Install Package
+Type=Script Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=install --user
+EnvironmentGroup=
+Executable=./setup.py
+Execute on Remote Host=false
+Interpreter=python3
+Output Filtering Mode=0
+Remote Host=
+Run current file=false
+Working Directory=
+
+[Project]
+VersionControlSupport=kdevgit

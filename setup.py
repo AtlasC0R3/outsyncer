@@ -16,6 +16,6 @@ setup(name='outsyncer',
       author='atlas_core',
       license='GPL-3.0',
       install_requires=install_requires,
-      packages=['outsyncer'],
+      packages=['outsyncer', 'outsyncer.utils'],
       python_requires=">=3.9",
-      zip_safe=True)
+      zip_safe=False)

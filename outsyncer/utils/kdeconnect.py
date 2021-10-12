@@ -1,6 +1,7 @@
 from subprocess import check_output
 import re
 import os
+from logging import info
 
 
 class Device:
@@ -29,7 +30,7 @@ def get_devices():
         device_thing = Device()
         device_thing.name = device_name
         device_thing.id = device_id
-        print(f"Found {device_name} ({device_id}) through KDE Connect!")
+        info(f"Found {device_name} ({device_id}) through KDE Connect!")
         devices_a.append(device_thing)
     return devices_a
 
@@ -65,8 +66,11 @@ def get_kdeconnect_device_path(device_id: str, attempt_to_guess=True):
     :param device_id: the device id obtained using get_devices()
     :param attempt_to_guess: if True, it'll attempt to find one directory with a music directory.
     if one is found, then return that path. if none are found, return everything.
-    :return: will return either a KDEPath() object or a list of KDEPath() objects
+    :return: will return either a KDEPath() object, a list of KDEPath() objects or nothing
     """
+    if device_id.startswith('_') and device_id.endswith('_'):
+        raise LookupError("That's not a device with mountable directories.")
+        # idk what exception to use
     device_path = f"/run/user/{get_userid()}/{device_id}/"
     # [f.name for f in os.scandir(device_path) if f.is_dir()]
     subdirectories = [x for x in os.scandir(device_path) if x.is_dir()]
@@ -122,7 +126,10 @@ def get_kdeconnect_device():
     else:
         device_to_use = shit_yourself[0]  # there's only one option. no point in asking.
 
-    paths = get_kdeconnect_device_path(device_to_use.id, False)  # get device's path (s)
+    try:
+        paths = get_kdeconnect_device_path(device_to_use.id, False)  # get device's path (s)
+    except LookupError:
+        return None
     if not paths:
         print("Device not mounted. Please mount it.")
         while not paths:

@@ -35,7 +35,17 @@ However, making the KDE Connect connectivity work on Windows isn't very possible
 KDE Connect on Linux mounts a directory that essentially is just a portal for apps and file managers 
 to access a KDE Connect device. This doesn't happen under Windows due to how Windows works.
 
+### What about GSConnect?
+Unfortunately, GSConnect does not have a CLI.
+
+Essentially, what that means is that I cannot find a way to talk to the KDE Connect core inside GSConnect
+to try and see which devices are connected and such. I may be wrong though, but I could not find any "easy" way
+to support GSConnect the same way KDE Connect would be supported.
+
 ### Will there be MTP support?
 Unfortunately, *no*. I couldn't find any modern Python MTP libraries that worked.
 
+
+
+----------------------------------------------------
 *Copyright (C) 2021 atlas_core*

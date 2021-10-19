@@ -1,6 +1,7 @@
 import glob
 try:
     import music_tag
+    from progress.bar import IncrementalBar
 except ModuleNotFoundError:
     print("Tried installing the pip requirements for this program? "
           "I can't work if you don't install the requirements!")
@@ -16,7 +17,216 @@ from subprocess import run
 from .utils.folderformat import *
 from .utils.misc import clean_folders
 
-__version__ = '1.0.0'
+__version__ = '0.0.0'
+
+
+if os.name not in ["nt", "posix"]:
+    print("Cannot complete folder formatting because Atlas is an idiot")
+    logging.error("warned user that directory files is impossible due to macOS "
+                  "and the fact that I don't have any Apple products at home "
+                  "so I can't even implement this feature for macOS devices.")
+    can_folderformat = False
+    # I don't have a macOS system and I really don't wanna mess with KVM for now.
+else:
+    can_folderformat = True
+    # import necessary dependencies for that to happen
+    from PIL import Image
+    import io
+
+
+def transfer_songs(tracks: list, raw_format_string: "", old_format: "",
+                   convert_to: str, exclude_regex_pattern: re.Pattern,
+                   check_if_files_are_different: bool, delete_file: bool, remote_path: str,
+                   directory_file_name: str):
+    """
+    # TODO: reduce the amount of parameters here. holy fucking shit.
+    :param tracks: list of outsyncer.utils.classes.Track objects
+                   so that I can know what you want me to transfer.
+    :param raw_format_string: '{t.artist}||({t.year}) {t.album}||{t.tracknumber} {t.title}'
+    :param old_format: use if you want to transfer files from an old format to raw_format_string
+    :param convert_to: file extension to convert to
+    :param exclude_regex_pattern:
+    :param check_if_files_are_different:
+    :param delete_file:
+    :param remote_path:
+    :param directory_file_name:
+    :return:
+    """
+    overall_time = d.timestamp(d.now())  # start transfer timer
+    len_tracks = len(tracks)
+    bar = IncrementalBar(max=len_tracks)
+    if old_format and old_format != raw_format_string:
+        is_there_a_new_format = True
+    else:
+        is_there_a_new_format = False
+    for index, track in enumerate(tracks):  # loop through every track
+        old_dist_path = None  # OH MY FUCKING GOD PYCHARM SHUT THE FUCK UP THIS WON'T BE UNDEFINED
+        # I think I was angry here?
+        if raw_format_string:  # if we should format according to the user
+            format_string = raw_format_string.format(t=track).replace('/', '')
+            # format the actual string for our needs, and don't make any accidental directories
+            path_strings = format_string.split('||')  # differentiate the different directories
+            path_strings = [exclude_regex_pattern.sub('', x) for x in path_strings]
+            # pass our magic regex thing to make sure that creating a directory won't error
+            if len(path_strings) != 3:  # if we don't have 3 directories to create
+                print("The custom directory format is invalid. There must be exactly three "
+                      "directories (separated by ||), the first one for the artist, the second one "
+                      "for the album and the third one for the song's name. Use --help for more info.")
+                # whine about it
+                exit(1)
+            artist_dir = path_strings[0] + "/"  # artist directory
+            album_dir = path_strings[1] + "/"  # album directory
+            song_directories = f"{artist_dir}{album_dir}"  # the song's directory
+            song_file = f"{song_directories}" \
+                        f"{path_strings[2]}"  # the song's file path
+            song_path = song_file + f".{track.file_ext}"  # the song's file name and type
+            dist_path = f"{remote_path}{song_path}"  # the ACTUAL song path
+            if is_there_a_new_format:  # if we're replacing an old format already saved in directory
+                path_strings = old_format.format(t=track).replace('/', '').split('||')
+                path_strings = [exclude_regex_pattern.sub('', x) for x in path_strings]
+                # do the custom format path directories nonsense
+                old_artist_dir = path_strings[0] + "/"  # artist's old directory
+                old_album_dir = path_strings[1] + "/"  # album's old directory
+                old_song_directories = f"{old_artist_dir}{old_album_dir}"  # old directories
+                old_song_file = f"{old_song_directories}" \
+                                f"{path_strings[2]}"  # old song file path
+                old_song_path = old_song_file + f".{track.file_ext}"  # old song file name
+                old_dist_path = f"{remote_path}{old_song_path}"  # old song TRUE filepath
+        else:  # if we DON'T have to format the format string nonsense things
+            artist_dir = f"{exclude_regex_pattern.sub('', track.artist.lower())}/".replace(' ', '')
+            # format artist name in a way that "Three Days Grace" becomes "threedaysgrace"
+            album_dir = f"{exclude_regex_pattern.sub('', track.album.lower())}/".replace(' ', '')
+            # format album name so that "One-X" becomes "onex"
+            song_directories = f"{artist_dir}{album_dir}".replace(' ', '')  # directories for song
+            song_file = f"{song_directories}" \
+                        f"{exclude_regex_pattern.sub('', track.title.lower())}".replace(' ', '')
+            # also format file name around the title, so if it's "It's All Over",
+            # it should look like "itsallover"
+            # directories for song
+            song_path = song_file + f".{track.file_ext}"  # song file name and extension
+            dist_path = f"{remote_path}{song_path}"  # song file path
+        if not os.path.exists(remote_path):  # if the specified directory doesn't exist
+            os.mkdir(remote_path)  # make one
+        if not os.path.exists(f"{remote_path}{artist_dir}"):  # if the artist directory existn't
+            os.mkdir(f"{remote_path}{artist_dir}")  # make one
+        if not os.path.exists(f"{remote_path}{artist_dir}{album_dir}"):  # if album dir no exist
+            os.mkdir(f"{remote_path}{artist_dir}{album_dir}")  # make
+        bar.message = f"%(percent).1f%% - %(elapsed)ds, ETA %(eta)ds: {track.title} by {track.artist}"
+        bar.next()
+        do_copy = True  # if we should, ha, y'know, copy.
+        if convert_to:  # if we should convert
+            if os.path.exists(dist_path):  # if unconverted file exists
+                print(f"{dist_path} has been found; deleting in favor of the converted file...")
+                # warn the user
+                os.remove(dist_path)  # remove unconverted file
+            song_path = song_file + f".{convert_to}"  # remake song filename to use the new format
+            dist_path = f"{remote_path}{song_path}"  # remake song path
+        if os.path.exists(dist_path):  # seems like this song was already transferred
+            logging.info(f"Whoop! {dist_path} already exists.")
+            if check_if_files_are_different and not convert_to:
+                # we're allowed to see the file differences
+                logging.info(f"Is {dist_path} the same as {track.filename}?")
+                do_copy = not filecmp.cmp(track.filename, dist_path)
+                # verify if the two are different
+                if not do_copy:  # they're identical
+                    logging.info(f"{dist_path} and {track.filename} are identical. Skipping.")
+                else:  # they're different
+                    logging.info(f"{dist_path} and {track.filename} are different; overwriting.")
+                    os.remove(dist_path)
+            else:
+                # we're not allowed to check for differences.
+                do_copy = False  # don't copy, it already exists
+        if is_there_a_new_format:
+            if os.path.exists(old_dist_path):
+                # the old format's equivalent of the song we're transferring was found
+                print(f"{old_dist_path} has been found; deleting in favor of the new path format...")
+                os.remove(old_dist_path)
+                # remove so that it can also migrate to the new format
+        if do_copy or (convert_to and do_copy):  # if we're allowed to copy
+            song_path = song_path.replace('  ', ' ')  # no funky song path anomalies
+            logging.debug(f"copy {track.filename} ({track.title} by {track.artist}) to "
+                          f"{remote_path}{song_path}")
+            start = d.timestamp(d.now())  # start the timer for how much time it takes to transfer
+            # print(f"Copying {track.title} by {track.artist}...")
+            converted_filename = None  # initializing the variable for the filename for conversion
+            do_convert = False  # should we convert
+            # hey me, pick up the slack. I don't wanna miss the bus.
+            # can do, past me.
+            if convert_to:  # if we must convert
+                if dist_path.endswith(convert_to):
+                    # if the file we're trying to convert is already in said format
+                    logging.info(f'whoops, {song_path} is already in {convert_to}, we won\'t convert')
+                    # no need to convert
+                    do_convert = False  # remember that we don't need to convert
+                else:
+                    # file type is different, we should convert.
+                    converted_filename = f"output.{convert_to}"  # set the variable
+                    do_convert = True  # remember that we do    need to convert
+            try:
+                # Putting this in a try: except: block so that the user can do KeyboardInterrupt
+                # and the program will automatically clean up after itself.
+                if do_convert:  # if we should convert
+                    # convert
+                    run_results = run(['ffmpeg', '-i', track.filename,  # hey FFmpeg, convert this
+                                       '-map_metadata', '0',  # keep its metadata
+                                       converted_filename],  # save it to output.mp3
+                                      capture_output=True)  # to inspect errors
+                    if run_results.returncode != 0:  # if FFmpeg is unhappy
+                        if f"Unable to find a suitable output format for '{converted_filename}'" \
+                                in run_results.stderr.decode('utf-8'):
+                            # the user passed an invalid file extension
+                            print(f"\nUh oh, it seems like FFmpeg does not "
+                                  f"support \"{convert_to}\" as a file extension. "
+                                  f"Make sure it's written properly, or use another "
+                                  f"format.")
+                        else:
+                            # FFmpeg is just unhappy and we don't know why.
+                            print(f"\nUh oh. Something's not right. FFmpeg had an error.\n"
+                                  f"Here are a few last lines from the ffmpeg output:\n")
+                            print('\n'.join(run_results.stderr.decode('utf-8').split('\n')[-6:-1]))
+                        exit(run_results.returncode)
+                    shutil.move(converted_filename, dist_path)  # then transfer converted file
+                else:
+                    # just copy the file. easy. no need to do complex funky conversion stuff.
+                    shutil.copy(track.filename, dist_path)
+                if delete_file:
+                    # delete the file, as we are done sorting it.
+                    os.remove(track.filename)
+            except KeyboardInterrupt:
+                # delete the file
+                print("\n\nKeyboardInterrupt received, attempting to delete file...\n"
+                      "You can abort this process completely by sending KeyboardInterrupt now.")
+                # Or if you were less kind, pkill python3
+                try:
+                    os.remove(dist_path)
+                except FileNotFoundError:
+                    # oh well
+                    pass
+                if converted_filename:
+                    os.remove(converted_filename)  # remove temporary converted file
+                print("File deleted. Aborting.")
+                exit(1)
+            milliseconds = (d.timestamp(d.now()) - start) * 1000
+            # how much time did we take to transfer that file?
+            logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
+        if (not os.path.exists(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}")) and \
+                can_folderformat:
+            # if the directory doesn't have a directory file and
+            # if the user told us to generate one
+            # generate favicon.ico file
+            artwork = Image.open(io.BytesIO(track.artwork.data))  # open the artwork image
+            artwork.save(f'{remote_path}{artist_dir}{album_dir}favicon.ico')  # save it as .ico
+            # generate desktop.ini/.directory file
+            open(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}", 'wt'). \
+                write(format_directory_file(track).replace('\n', '\r\n'))
+            if os.name == 'nt':
+                # because fucking Windows is fucking Windows.
+                # you have to use these commands to make Windows look at the desktop.ini file.
+                os.system(f'attrib +S +H "{remote_path}{artist_dir}{album_dir}{directory_file_name}"')
+                os.system(f'attrib +R "{remote_path}{artist_dir}{album_dir.removesuffix("/")}"')
+                # I don't know what these commands do.
+    bar.finish()
+    return overall_time
 
 
 def main():
@@ -89,17 +299,7 @@ def main():
     args = parser.parse_args()  # get and parse arguments passed by user
 
     if args.folderformat:      # if we should inject desktop.ini and .directory files
-        if os.name not in ["nt", "posix"]:
-            print("Cannot complete folder formatting because Atlas is an idiot")
-            logging.error("warned user that directory files is impossible due to macOS "
-                          "and the fact that I don't have any Apple products at home "
-                          "so I can't even implement this feature for macOS devices.")
-            args.folderformat = False
-            # I don't have a macOS system and I really don't wanna mess with KVM for now.
-        else:
-            # import necessary dependencies for that to happen
-            from PIL import Image
-            import io
+        args.folderformat = can_folderformat
 
     log_level = args.log  # get log level argument
     if log_level:
@@ -256,178 +456,14 @@ def main():
         # what the hell is this OS?
         directory_file_name = None
 
-    overall_time = d.timestamp(d.now())     # start transfer timer
-    for index, track in enumerate(tracks):  # loop through every track
-        old_dist_path = None  # OH MY FUCKING GOD PYCHARM SHUT THE FUCK UP THIS WON'T BE UNDEFINED
-        # I think I was angry here?
-        if raw_format_string:  # if we should format according to the user
-            format_string = raw_format_string.format(t=track).replace('/', '')
-            # format the actual string for our needs, and don't make any accidental directories
-            path_strings = format_string.split('||')  # differentiate the different directories
-            path_strings = [exclude_regex_pattern.sub('', x) for x in path_strings]
-            # pass our magic regex thing to make sure that creating a directory won't error
-            if len(path_strings) != 3:  # if we don't have 3 directories to create
-                print("The custom directory format is invalid. There must be exactly three "
-                      "directories (separated by ||), the first one for the artist, the second one "
-                      "for the album and the third one for the song's name. Use --help for more info.")
-                # whine about it
-                exit(1)
-            artist_dir = path_strings[0] + "/"             # artist directory
-            album_dir = path_strings[1] + "/"              # album directory
-            song_directories = f"{artist_dir}{album_dir}"  # the song's directory
-            song_file = f"{song_directories}" \
-                        f"{path_strings[2]}"               # the song's file path
-            song_path = song_file + f".{track.file_ext}"   # the song's file name and type
-            dist_path = f"{remote_path}{song_path}"        # the ACTUAL song path
-            if new_format_string:  # if we're replacing an old format already saved in directory
-                path_strings = old_format.format(t=track).replace('/', '').split('||')
-                path_strings = [exclude_regex_pattern.sub('', x) for x in path_strings]
-                # do the custom format path directories nonsense
-
-                old_artist_dir = path_strings[0] + "/"                     # artist's old directory
-                old_album_dir = path_strings[1] + "/"                      # album's old directory
-                old_song_directories = f"{old_artist_dir}{old_album_dir}"  # old directories
-                old_song_file = f"{old_song_directories}" \
-                                f"{path_strings[2]}"                       # old song file path
-                old_song_path = old_song_file + f".{track.file_ext}"       # old song file name
-                old_dist_path = f"{remote_path}{old_song_path}"            # old song TRUE filepath
-
-        else:  # if we DON'T have to format the format string nonsense things
-            artist_dir = f"{exclude_regex_pattern.sub('', track.artist.lower())}/".replace(' ', '')
-            # format artist name in a way that "Three Days Grace" becomes "threedaysgrace"
-            album_dir = f"{exclude_regex_pattern.sub('', track.album.lower())}/".replace(' ', '')
-            # format album name so that "One-X" becomes "onex"
-            song_directories = f"{artist_dir}{album_dir}".replace(' ', '')  # directories for song
-            song_file = f"{song_directories}" \
-                        f"{exclude_regex_pattern.sub('', track.title.lower())}".replace(' ', '')
-            # also format file name around the title, so if it's "It's All Over",
-            # it should look like "itsallover"
-
-            # directories for song
-            song_path = song_file + f".{track.file_ext}"  # song file name and extension
-            dist_path = f"{remote_path}{song_path}"       # song file path
-
-        if not os.path.exists(remote_path):  # if the specified directory doesn't exist
-            os.mkdir(remote_path)            # make one
-        if not os.path.exists(f"{remote_path}{artist_dir}"):  # if the artist directory existn't
-            os.mkdir(f"{remote_path}{artist_dir}")            # make one
-        if not os.path.exists(f"{remote_path}{artist_dir}{album_dir}"):  # if album dir no exist
-            os.mkdir(f"{remote_path}{artist_dir}{album_dir}")            # make
-
-        do_copy = True  # if we should, ha, y'know, copy.
-        if convert_to:  # if we should convert
-            if os.path.exists(dist_path):  # if unconverted file exists
-                print(f"{dist_path} has been found; deleting in favor of the converted file...")
-                # warn the user
-                os.remove(dist_path)  # remove unconverted file
-            song_path = song_file + f".{convert_to}"  # remake song filename to use the new format
-            dist_path = f"{remote_path}{song_path}"   # remake song path
-        if os.path.exists(dist_path):  # seems like this song was already transferred
-            logging.info(f"Whoop! {dist_path} already exists.")
-            if check_if_files_are_different and not convert_to:
-                # we're allowed to see the file differences
-                logging.info(f"Is {dist_path} the same as {track.filename}?")
-                do_copy = not filecmp.cmp(track.filename, dist_path)
-                # verify if the two are different
-                if not do_copy:  # they're identical
-                    logging.info(f"{dist_path} and {track.filename} are identical. Skipping.")
-                else:  # they're different
-                    logging.info(f"{dist_path} and {track.filename} are different; overwriting.")
-                    os.remove(dist_path)
-            else:
-                # we're not allowed to check for differences.
-                do_copy = False  # don't copy, it already exists
-        if new_format_string:
-            if os.path.exists(old_dist_path):
-                # the old format's equivalent of the song we're transferring was found
-                print(f"{old_dist_path} has been found; deleting in favor of the new path format...")
-                os.remove(old_dist_path)
-                # remove so that it can also migrate to the new format
-        if do_copy or (convert_to and do_copy):  # if we're allowed to copy
-            song_path = song_path.replace('  ', ' ')  # no funky song path anomalies
-            logging.debug(f"copy {track.filename} ({track.title} by {track.artist}) to "
-                          f"{remote_path}{song_path}")
-            start = d.timestamp(d.now())  # start the timer for how much time it takes to transfer
-            print(f"Copying {track.title} by {track.artist}...")
-            converted_filename = None  # initializing the variable for the filename for conversion
-            do_convert = False  # should we convert
-            # hey me, pick up the slack. I don't wanna miss the bus.
-            # can do, past me.
-            if convert_to:  # if we must convert
-                if dist_path.endswith(convert_to):
-                    # if the file we're trying to convert is already in said format
-                    logging.info(f'whoops, {song_path} is already in {convert_to}, we won\'t convert')
-                    # no need to convert
-                    do_convert = False  # remember that we don't need to convert
-                else:
-                    # file type is different, we should convert.
-                    converted_filename = f"output.{convert_to}"  # set the variable
-                    do_convert = True   # remember that we do    need to convert
-            try:
-                # Putting this in a try: except: block so that the user can do KeyboardInterrupt
-                # and the program will automatically clean up after itself.
-                if do_convert:  # if we should convert
-                    # convert
-                    run_results = run(['ffmpeg', '-i', track.filename,  # hey FFmpeg, convert this
-                                       '-map_metadata', '0',            # keep its metadata
-                                       converted_filename],             # save it to output.mp3
-                                      capture_output=True)              # to inspect errors
-                    if run_results.returncode != 0:  # if FFmpeg is unhappy
-                        if f"Unable to find a suitable output format for '{converted_filename}'" \
-                                in run_results.stderr.decode('utf-8'):
-                            # the user passed an invalid file extension
-                            print(f"\nUh oh, it seems like FFmpeg does not "
-                                  f"support \"{convert_to}\" as a file extension. "
-                                  f"Make sure it's written properly, or use another "
-                                  f"format.")
-                        else:
-                            # FFmpeg is just unhappy and we don't know why.
-                            print(f"\nUh oh. Something's not right. FFmpeg had an error.\n"
-                                  f"Here are a few last lines from the ffmpeg output:\n")
-                            print('\n'.join(run_results.stderr.decode('utf-8').split('\n')[-6:-1]))
-                        exit(run_results.returncode)
-                    shutil.move(converted_filename, dist_path)  # then transfer converted file
-                else:
-                    # just copy the file. easy. no need to do complex funky conversion stuff.
-                    shutil.copy(track.filename, dist_path)
-                if delete_file:
-                    # delete the file, as we are done sorting it.
-                    os.remove(track.filename)
-            except KeyboardInterrupt:
-                # delete the file
-                print("\n\nKeyboardInterrupt received, attempting to delete file...\n"
-                      "You can abort this process completely by sending KeyboardInterrupt now.")
-                # Or if you were less kind, pkill python3
-                try:
-                    os.remove(dist_path)
-                except FileNotFoundError:
-                    # oh well
-                    pass
-                if converted_filename:
-                    os.remove(converted_filename)  # remove temporary converted file
-                print("File deleted. Aborting.")
-                exit(1)
-            milliseconds = (d.timestamp(d.now()) - start) * 1000
-            # how much time did we take to transfer that file?
-            logging.info(f"{milliseconds}ms to transfer {track.title} by {track.artist}.")
-        if (not os.path.exists(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}")) and \
-                args.folderformat:
-            # if the directory doesn't have a directory file and
-            # if the user told us to generate one
-
-            # generate favicon.ico file
-            artwork = Image.open(io.BytesIO(track.artwork.data))           # open the artwork image
-            artwork.save(f'{remote_path}{artist_dir}{album_dir}favicon.ico')  # save it as .ico
-
-            # generate desktop.ini/.directory file
-            open(f"{remote_path}{artist_dir}{album_dir}{directory_file_name}", 'wt'). \
-                write(format_directory_file(track).replace('\n', '\r\n'))
-            if os.name == 'nt':
-                # because fucking Windows is fucking Windows.
-                # you have to use these commands to make Windows look at the desktop.ini file.
-                os.system(f'attrib +S +H "{remote_path}{artist_dir}{album_dir}{directory_file_name}"')
-                os.system(f'attrib +R "{remote_path}{artist_dir}{album_dir.removesuffix("/")}"')
-                # I don't know what these commands do.
+    overall_time = transfer_songs(tracks, raw_format_string, old_format,
+                                  convert_to, exclude_regex_pattern, check_if_files_are_different,
+                                  delete_file, remote_path, directory_file_name)
+    # tracks: list, raw_format_string: "", old_format: "",
+    #                    convert_to: str, exclude_regex_pattern: re.Pattern,
+    #                    check_if_files_are_different: bool, delete_file: bool, remote_path: str,
+    #                    directory_file_name: str):
+    # way too many fucking arguments.
 
     print("Cleaning empty directories...")
     clean_folders(remote_path)

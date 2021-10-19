@@ -1,3 +1,6 @@
 mutagen
 music-tag
-pillow
+pillow~=8.4.0
+setuptools~=57.4.0
+outsyncer~=0.0.0
+progress~=1.6

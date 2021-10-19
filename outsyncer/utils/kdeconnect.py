@@ -73,7 +73,10 @@ def get_kdeconnect_device_path(device_id: str, attempt_to_guess=True):
         # idk what exception to use
     device_path = f"/run/user/{get_userid()}/{device_id}/"
     # [f.name for f in os.scandir(device_path) if f.is_dir()]
-    subdirectories = [x for x in os.scandir(device_path) if x.is_dir()]
+    try:
+        subdirectories = [x for x in os.scandir(device_path) if x.is_dir()]
+    except FileNotFoundError:
+        subdirectories = []
     # find all filesystem exposures
     if len(subdirectories) == 1:
         thing = subdirectories[0]  # Thanks, user, for only having one location for everything! =D

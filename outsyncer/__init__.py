@@ -111,7 +111,7 @@ def transfer_songs(tracks: list, raw_format_string: "", old_format: "",
             os.mkdir(f"{remote_path}{artist_dir}")  # make one
         if not os.path.exists(f"{remote_path}{artist_dir}{album_dir}"):  # if album dir no exist
             os.mkdir(f"{remote_path}{artist_dir}{album_dir}")  # make
-        bar.message = f"%(percent).1f%% - %(elapsed)ds, ETA %(eta)ds: {track.title} by {track.artist}"
+        bar.suffix = f"%(percent).1f%% - %(elapsed)ds, ETA %(eta)ds: {track.title} by {track.artist}"
         bar.next()
         do_copy = True  # if we should, ha, y'know, copy.
         if convert_to:  # if we should convert
